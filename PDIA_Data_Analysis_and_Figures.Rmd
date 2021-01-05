@@ -1,0 +1,631 @@
+---
+title: "PDIA_SAA"
+author: "Erik Gjesfjeld"
+date: "12/15/2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This markdown document presents the R code for the analysis of responses from the Publication Decisions in Archaeology (PDIA) survey of carried out by Drs. Jess Beck, Erik Gjesfjeld, and Stephen Chrisomalis. The data presented here was derived from a survey that was taken by respondents through the Qualtrics platform with details provided in the manuscript and supplemental information.
+
+## Data Sources
+
+The analysis preformed in this research is broadly comprised of six sources of data. These include:
+
+1. Demographic information for each respondent (PDIA_Cleaned.csv)
+2. List of Journal names given by each respondent (PDIA_Cleaned.csv)
+3. Ranking of prestige factors given by each respondent (PDIA_Cleaned.csv)
+4. Comments provided by respondents (PDIA_Comments.csv)
+5. Scientific journal rankings (SJRs) as listed by Scimago (Journals_SJR_Ulrichs.csv)
+6. Additional Journal metadata as provided Ulrich's database (Journals_SJR_Ulrichs.csv)
+
+
+## Data cleaning
+
+Data used in this work was initially cleaned by Dr. J. Beck and provided with further cleaning was performed by Dr. E. Gjesfjeld. The cleaning process broadly included the following:
+- Removal of timestamp information for respondents
+- Standardization of journal names (i.e. removing journal abbreviations) to coincide with Ulrich's journal names
+- Summarizing comments
+
+## Data Analysis
+
+The organization and analysis of the data is performed using R and these related packages, which can be loaded into your R environment using the following. (Note: For beginning R users, these packages must first be installed using the install.packages() function.)
+
+```{r,echo=FALSE,message=FALSE,results=FALSE}
+library(tidyverse)
+library(scales)
+library(grid)
+library(janitor)
+library(data.table)
+library(ggpubr)
+```
+
+The previously cleaned survey data can be loaded into your R environment with
+
+```{r loading responses, eval=TRUE }
+#Reading in the cleaned data
+results <- read.csv('https://github.com/erikgjes/Publication_Perceptions/raw/1603ffca25044c6922380ae1baae3765a723f931/PDIA_Cleaned.csv')
+```
+
+The data collected from Scimago and Ulrich's can be read in with the following command:
+
+```{r loading journals, eval=TRUE }
+#Reading in the cleaned data
+journal_scores<-read.csv('https://github.com/erikgjes/Publication_Perceptions/raw/main/Journals_SJR_Ulrichs.csv')
+```
+
+
+### Demographic Information
+
+We summarized demographic information on respondents using the following code. Here we present the results for gender, age, and career stage.  
+
+```{r loading journals, eval=TRUE }
+gender <- results %>% 
+  drop_na(Gender) %>%
+  group_by(Gender) %>% 
+  summarize(count=n()) %>%
+  mutate(prop=round(count/sum(count),digits=2))
+
+age <- results %>% 
+  drop_na(Age) %>%
+  group_by(Age) %>% 
+  summarize(count=n()) %>%
+  mutate(prop=round(count/sum(count),digits=2))
+
+career <- results %>% 
+  drop_na(Career) %>%
+  group_by(Career) %>% 
+  summarize(count=n()) %>% mutate(prop=round(count/sum(count),digits=2)) %>% 
+  mutate(Position_Short=c("Asst Prof","Assoc Prof","CRM", "Emeritus", "Professor", "Masters","Other",
+                    "PhD","Post-Doc","Visit Prof"))
+
+```
+
+The demographic information can be plotted with the following:
+
+```{r loading journals, eval=TRUE }
+gender_hist<-ggplot(gender,aes(x=Gender,y=count)) +
+  geom_bar(stat="identity",fill="dodgerblue",width=0.6) +
+  labs(x="",y="Count",title="Gender") +
+  geom_text(aes(label = prop),
+            vjust=-0.75,
+            color = "black",
+            size = 6) +
+  #theme_classic(base_size = 22) +
+    theme_bw(base_size=20) + 
+  ylim(0,max(gender$count)*1.2) +
+  scale_x_discrete(labels = c("Men","Women"))
+
+age_hist<-ggplot(age,aes(x=Age,y=count)) +
+  geom_bar(stat="identity",fill="firebrick",width=0.6) +
+  labs(x="",y="Count",title="Age") +
+  geom_text(aes(label = prop),
+            vjust=-0.75,
+            color = "black",
+            size = 6) +
+  #theme_classic(base_size=22) +
+    theme_bw(base_size=20) + 
+  ylim(0,max(age$count)*1.2)
+
+#Reorder the x-axis for career stage following chronological order
+
+career_axis <- data.frame(Position_Short=c("PhD", "Asst Prof", "Assoc Prof", "Post-Doc","Professor",
+                                           "Other","CRM","Masters","Visit Prof","Emeritus"),
+                          car_x_pos=c(2,5,6,3,7,10,9,1,4,8))
+
+career_order<- left_join(career, career_axis, by="Position_Short")
+
+career_hist<-ggplot(career_order,aes(x=reorder(Position_Short,car_x_pos),y=count)) +
+  geom_bar(stat="identity",fill="gold4",width=0.6) +
+  labs(x="",y="Count",title="Career Stage") +
+  geom_text(aes(label = prop),
+            vjust=-0.75,
+            color = "black",
+            size = 6) +
+  #theme_classic(base_size=22) +
+  theme_bw(base_size=20) + 
+  ylim(0,max(career_order$count)*1.2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),plot.margin = unit(c(0.5,0.5,0.5,0.5),"cm"))
+
+```
+
+The figure displayed in the manuscript can be displayed with the following:
+
+```{r demo plots, eval=TRUE }
+jpeg("~/Desktop/Figure_1.jpg",width=12,height=10,units="in",res=300)
+
+ggarrange(ggarrange(gender_hist, age_hist, ncol = 2, labels = c("A", "B")), # First row with scatter plot
+          career_hist, # Second row with box and dot plots
+          nrow = 2, 
+          labels = "C",
+          vjust = 35.5
+          ) 
+
+dev.off()
+
+```
+
+## How diverse is the landscape of archaeological publishing?
+
+```{r survey metadata, eval=TRUE}
+subject_ulrichs<-read.csv("https://github.com/erikgjes/Publication_Perceptions/raw/main/PDIA_Subject_Ulrichs.csv")
+subject_table <- as.data.frame(table(c(subject_ulrichs$subject_1,subject_ulrichs$subject_2,
+                       subject_ulrichs$subject_3,subject_ulrichs$subject_4)))
+
+colnames(subject_table) <- c("Subject","Count")
+
+subject_table_top <- subject_table %>% arrange(desc(Count)) %>% filter(Count > 5)
+
+```
+
+
+```{r demo plots, eval=TRUE }
+jpeg("~/Desktop/Figure_2.jpg",width=12,height=7,units="in",res=300)
+
+subject_table_top %>%
+  arrange(Count) %>%    # First sort by val. This sort the dataframe but NOT the factor levels
+  mutate(name=factor(Subject, levels=Subject)) %>%   # This trick update the factor levels
+  ggplot( aes(x=name, y=Count)) +
+  geom_col(size=4,fill="purple4") +
+  coord_flip() +
+  theme_bw(base_size = 20) +
+  xlab("")
+
+dev.off()
+
+```
+
+
+In addition to our survey response data, we also gathered metadata surrounding the journals listed in our sample. In order to view the journal responses, we will first need to count up the journal names given by the respondents of the survey. The code to do that can be fount here:
+
+```{r}
+Q11<-apply(results[,11:16],2,c)
+Q11_table<-as.data.frame(table(Q11)) %>% arrange(desc(Freq))
+names(Q11_table) <- c("journal_name","count")
+Q11_table$prop<-round(Q11_table$count/sum(Q11_table$count),digits=2)
+Q11_table$rank <- as.numeric(as.factor(-Q11_table$count))
+```
+
+Next, we will also want to merge (or join) each of the journal names given as a response with the Scimago Journal Ranks (SJR) as gathered independently from [Scimago](www.scimagojr.com). In addition, we used the Ulrichs Database (add in website) to gather additional information about the journals themselves including the type of journal, origination year, 
+
+```{r,warning=FALSE}
+Q11_SJR<-left_join(Q11_table,journal_scores,by="journal_name")
+Q11_SJR <- Q11_SJR %>% arrange(desc(SJR)) %>% mutate(SJR_rank=rank(-SJR))
+```
+
+
+The relationship between SJR scores and the prestige of journals (based on the counts of our survey) can be visualized with the following:
+
+```{r,echo=FALSE,warning=FALSE}
+Q11_outs<-filter(Q11_SJR, count >= 50 | SJR >= 7) %>% drop_na()
+Q11_inset<-filter(Q11_SJR, count <= 50 | SJR <= 7) 
+
+Q11_plot <- ggplot(Q11_SJR,aes()) +
+  geom_point(aes(x=count,y=SJR),color="navyblue",size=3) +
+  lims(x=c(-1,200),y=c(-1,30)) +
+    labs(x="Count",y="SJR",title="") +
+  annotate("rect",xmin=-1,xmax=50,ymin=-1,ymax=7,fill="grey50",alpha=0.2,color="grey50") +
+  geom_text(data=Q11_outs,aes(x=count,y=SJR,label=c("Cell","Nature","Science","PNAS","JAS","CA","JAA","JAMT","Amer Antiquity","Antiquity")),
+            hjust=c(-.3,-.3,-.3,-.3,-.3,-.3,-.3,.5,-.1,-.1),
+            vjust=c(0,0,0,0,0,0,0,1.5,0,0)) +
+  theme_bw(base_size=20)
+
+Q11_inset_counts <- filter(Q11_inset, count <= 50 & count >= 38 & SJR <7) 
+Q11_inset_SJR <- filter(Q11_inset, SJR >= 2.2 & SJR <= 7 & count <=50) 
+Q11_inset_outs <- rbind(Q11_inset_counts,Q11_inset_SJR) 
+
+Q11_inset_plot<-ggplot(Q11_inset,aes()) +
+  geom_point(aes(x=count,y=SJR),color="navyblue",size=3) +
+  lims(x=c(0,50),y=c(0,7)) +
+      labs(x="Count",y="SJR",title="") +
+  geom_text(data=Q11_inset_outs,aes(x=count,y=SJR,label=c("JAR","WA","SciAdv","NatComms","NatEcoEvol",
+                                                          "NatHumBeah","QSR","ProcB")),
+            hjust=c(-.3,-.3,-.3,-.15,-.1,-.1,-.2,-.2),
+            vjust=c(0,0,0,0.5,0.5,0.5,0,0)) +
+  theme_bw(base_size=20) +
+  theme( plot.background = element_rect(fill = "transparent",colour = NA),
+         panel.background = element_rect(fill = alpha('grey50',0.2),colour = NULL))
+```
+
+```{r}
+Q12<-apply(results[,17:19],2,c)
+Q12_table<-as.data.frame(table(Q12)) %>% arrange(desc(Freq))
+names(Q12_table) <- c("journal_name","count")
+Q12_table$prop<-round(Q12_table$count/sum(Q12_table$count),digits=2)
+Q12_table$rank <- as.numeric(as.factor(-Q12_table$count))
+
+Q12_SJR<-left_join(Q12_table,journal_scores,by="journal_name")
+Q12_SJR <- Q12_SJR %>% arrange(desc(SJR)) %>% mutate(SJR_rank=rank(-SJR))
+
+Q12_outs<-filter(Q12_SJR, count >= 25 | SJR >= 7) %>% drop_na()
+Q12_inset<-filter(Q12_SJR, count <= 25 | SJR <= 7)
+
+Q12_inset_counts <- filter(Q12_inset, count <= 25 & count >= 12 & SJR <7)
+Q12_inset_SJR <- filter(Q12_inset, SJR >= 3 & SJR <= 7 & count <=25)
+Q12_inset_outs <- rbind(Q12_inset_counts,Q12_inset_SJR)                
+
+
+Q12_plot <- ggplot(Q12_SJR,aes()) +
+  geom_point(aes(x=count,y=SJR),color="darkgreen",size=3) +
+  lims(x=c(-1,100),y=c(-1,30)) +
+  annotate("rect",xmin=-1,xmax=25,ymin=-1,ymax=7,fill="grey50",alpha=0.2,color="grey50") +
+  geom_text(data=Q12_outs,aes(x=count,y=SJR,label=c("Cell","Nature","Science","PNAS","JAS","CA","Amer Antiquity","Antiquity")),
+            hjust=c(-.3,-.2,-.2,-.3,-.3,-.3,.5,-.2),
+            vjust=c(0,0,0,0,0,0,1.5,0.3)) +
+  theme_bw(base_size = 20) + labs(x="Count",y="SJR")
+
+Q12_inset_plot<-ggplot(Q12_inset,aes()) +
+  geom_point(aes(x=count,y=SJR),color="darkgreen",size=3) +
+  geom_text(data=Q12_inset_outs,aes(x=count,y=SJR,label=c("JAA","JAMT","PlosOne","AmerAnth","WA","AJA","SciAdv","NatComms")),          hjust=c(0.8,0.5,0.8,.5,-.3,1.1,-.3,-.1),
+            vjust=c(-.5,-0.6,1.2,-1,1.3,1,0,1)) +
+  lims(x=c(0,25),y=c(0,7)) +
+  theme_bw(base_size = 20) +
+  theme(panel.background = element_rect(fill = alpha('grey50',0.2),colour = NULL)) + labs(x="Count",y="SJR")
+
+
+
+```
+
+
+
+
+```{r, fig.align="center",echo=FALSE,warning=FALSE,message=FALSE}
+jpeg("~/Desktop/Figure_3.jpg",width=12,height=12,units="in",res=300)
+
+par(mfrow=c(2,1))
+
+plot_2A <- Q11_plot + annotation_custom(ggplotGrob(Q11_inset_plot),
+                             xmin = 75, xmax = 200, ymin = 10, ymax = 33)
+
+plot_2B <- Q12_plot + annotation_custom(ggplotGrob(Q12_inset_plot),
+                             xmin = 13, xmax = 80, ymin = 10, ymax = 30)
+
+
+ggarrange(plot_2A, plot_2B, ncol=1,nrow=2,
+          labels = c("A","B"))
+
+
+dev.off()
+
+```
+
+
+
+
+
+# How do gender and career stage relate to journals listed to respondents?
+
+```{r}
+q1_responses <- results[,11:16] 
+q2_responses <- results[,17:19]
+
+SJR <- journal_scores$SJR
+Names <- journal_scores$journal_name
+
+f_match<-function(x,new,old){
+  new[match(x,old)]
+}
+
+q1_SJR<-as.data.frame(apply(q1_responses,2,f_match,SJR,Names))
+q2_SJR<-as.data.frame(apply(q2_responses,2,f_match,SJR,Names))
+
+q1_gender <- cbind(results[3],q1_SJR) %>% mutate(mean_SJR=round(rowMeans(q1_SJR,na.rm=TRUE),2))
+q2_gender <- cbind(results[3],q2_SJR) %>% mutate(mean_SJR=round(rowMeans(q2_SJR,na.rm=TRUE),3))
+
+Career_TT <- ifelse(results$Career == "Assistant Professor" | 
+                      results$Career == "Associate Professor" | 
+                      results$Career == "Full Professor" | 
+                      results$Career == "Emeritus Professor", "TT", "Non-TT")
+
+q1_TT_Career <- cbind(Career_TT, q1_SJR) %>%  mutate(mean_SJR=round(rowMeans(q1_SJR,na.rm=TRUE),2))
+q2_TT_Career <- cbind(Career_TT, q2_SJR) %>%  mutate(mean_SJR=round(rowMeans(q2_SJR,na.rm=TRUE),2))
+
+q1_Men <- filter(q1_gender, Gender == "Man")  %>% as.data.frame()
+q1_Women <- filter(q1_gender, Gender == "Woman")  %>% as.data.frame()
+
+q1_TT <- filter(q1_TT_Career, Career_TT == "TT")  %>% as.data.frame()
+q1_non_TT <- filter(q1_TT_Career, Career_TT == "Non-TT")  %>% as.data.frame()
+
+q2_Men <- filter(q2_gender, Gender == "Man") %>% as.data.frame()
+q2_Women <- filter(q2_gender, Gender == "Woman")  %>% as.data.frame()
+
+q2_TT <- filter(q2_TT_Career, Career_TT == "TT")  %>% as.data.frame()
+q2_non_TT <- filter(q2_TT_Career, Career_TT == "Non-TT")  %>% as.data.frame()
+
+
+t.test(q1_Men$mean_SJR,q1_Women$mean_SJR)
+t.test(q1_TT$mean_SJR,q1_non_TT$mean_SJR)
+t.test(q2_Men$mean_SJR,q2_Women$mean_SJR)
+t.test(q2_TT$mean_SJR,q2_non_TT$mean_SJR)
+
+```
+
+```{r}
+q1_Men_SJR <- c(q1_Men$Q1_1,q1_Men$Q1_2,q1_Men$Q1_3,q1_Men$Q1_4,q1_Men$Q1_5,q1_Men$Q1_6)
+q1_Women_SJR <- c(q1_Women$Q1_1,q1_Women$Q1_2,q1_Women$Q1_3,q1_Women$Q1_4,q1_Women$Q1_5,q1_Women$Q1_6)
+q1_TT_SJR <- c(q1_TT$Q1_1,q1_TT$Q1_2,q1_TT$Q1_3,q1_TT$Q1_4,q1_TT$Q1_5,q1_TT$Q1_6)
+q1_non_TT_SJR <- c(q1_non_TT$Q1_1,q1_non_TT$Q1_2,q1_non_TT$Q1_3,q1_non_TT$Q1_4,q1_non_TT$Q1_5,q1_non_TT$Q1_6)
+q2_Men_SJR <- c(q2_Men$Q2_1,q2_Men$Q2_2,q2_Men$Q2_3,q2_Men$Q2_4,q2_Men$Q2_5,q2_Men$Q2_6)
+q2_Women_SJR <- c(q2_Women$Q2_1,q2_Women$Q2_2,q2_Women$Q2_3,q2_Women$Q2_4,q2_Women$Q2_5,q2_Women$Q2_6)
+q2_TT_SJR <- c(q2_TT$Q2_1,q2_TT$Q2_2,q2_TT$Q2_3,q2_TT$Q2_4,q2_TT$Q2_5,q2_TT$Q2_6)
+q2_non_TT_SJR <- c(q2_non_TT$Q2_1,q2_non_TT$Q2_2,q2_non_TT$Q2_3,q2_non_TT$Q2_4,q2_non_TT$Q2_5,q2_non_TT$Q2_6)
+
+q1_gender_violin<-ggplot(filter(q1_gender, Gender == "Man"| Gender == "Woman"), 
+                                aes(x=Gender,y=mean_SJR)) +
+  geom_violin(fill="dodgerblue",alpha=0.5) + 
+  geom_point() +
+  labs(x="",y="Q1 - SJR Mean",title="Gender") +
+  annotate("text",x=c(1,2),y=11,label=round(c(mean(q1_Men_SJR,na.rm=TRUE),
+                                        mean(q1_Women_SJR,na.rm=TRUE)),2),size=6) +
+  ylim(0,11) + theme_bw(base_size = 16) + scale_x_discrete(labels=c("Men","Women"))
+
+q2_gender_violin<-ggplot(filter(q2_gender, Gender == "Man" | Gender == "Woman"),
+                         aes(x=Gender,y=mean_SJR)) +
+  geom_violin(fill="dodgerblue",alpha=0.5) + 
+  geom_point() +
+  labs(x="",y="Q2 - SJR Mean",title="") +
+  annotate("text",x=c(1,2),y=20,label=round(c(mean(q2_Men_SJR,na.rm=TRUE),
+                                        mean(q2_Women_SJR,na.rm=TRUE)),2),size=6) +
+  ylim(0,21) + theme_bw(base_size = 16) + scale_x_discrete(labels=c("Men","Women"))
+
+q1_TT_violin<-ggplot(q1_TT_Career, aes(x=Career_TT,y=mean_SJR)) +
+  geom_violin(fill="gold4",alpha=0.5) + 
+  geom_point() +
+  labs(x="",y="Q1 - SJR Mean",title="Career Stage") +
+  theme_classic(base_size = 22) +
+  annotate("text",x=c(1,2),y=11,label=round(c(mean(q1_non_TT_SJR,na.rm=TRUE),
+                                        mean(q1_TT_SJR,na.rm=TRUE)),2),size=6) +
+  ylim(0,11) + theme_bw(base_size = 16)
+
+q2_TT_violin<-ggplot(q2_TT_Career, aes(x=Career_TT,y=mean_SJR)) +
+  geom_violin(fill="gold4",alpha=0.5) + 
+  geom_point() +
+  labs(x="",y="Q2 - SJR Mean",title="") +
+  theme_classic(base_size = 22) +
+  annotate("text",x=c(1,2),y=20,label=round(c(mean(q2_non_TT_SJR,na.rm=TRUE),
+                                        mean(q2_TT_SJR,na.rm=TRUE)),2),size=6) +
+  ylim(0,21) + theme_bw(base_size = 16)
+
+
+```
+
+```{r}
+jpeg("~/Desktop/Figure_4.jpg",width=12,height=10,units="in",res=300)
+ggarrange(q1_gender_violin, q1_TT_violin, q2_gender_violin, q2_TT_violin,
+          ncol=2,nrow=2,
+          labels = c("A","B***","C*","D*"))
+dev.off()
+```
+
+### Rank the following factors in deciding where to submit an archaeological article, with the most important factor listed highest/first: 
+
+```{r,echo=FALSE,message=FALSE}
+
+q3<-as.data.frame(apply(results[,20:27],2,c))
+q3_sum <- data.frame(q3_1=table(q3$Q3_1),
+                      q3_2=table(q3$Q3_2),
+                      q3_3=table(q3$Q3_3),
+                      q3_4=table(q3$Q3_4),
+                      q3_5=table(q3$Q3_5),
+                      q3_6=table(q3$Q3_6),
+                      q3_7=table(q3$Q3_7),
+                      q3_8=table(q3$Q3_8)) %>% select(-1,-3,-5,-7,-9,-11,-13,-15)
+q3_sum$Total_Count <- rowSums(q3_sum)
+colnames(q3_sum) <- c("First","Second","Third","Fourth","Fifth","Sixth","Seventh","Eighth","Total_Counts")
+rownames(q3_sum) <- c("Prestige","Audience","Open_Access","Impact_Factor","Review_Process","Accept_Rate","Personal_Links","Prof_Obligation")
+
+#Function that tallys the reponses based on rank
+rank_median <- function(x){
+  z=NULL
+  for (i in 8:1){
+  reps <- rep(i,x[i])
+  z<-append(reps,z)
+  }
+  return(z)
+}
+
+rank_list <- as.data.frame(apply(q3_sum,1,rank_median))
+rank_summary <- as.data.frame(apply(rank_list,2,median))
+colnames(rank_summary) <- "median"
+rank_summary$mean <- colMeans(rank_list)
+
+```
+
+```{r,fig.align="center",echo=FALSE,warning=FALSE,message=FALSE}
+
+q3_sum_t <- as.data.frame(t(q3_sum))
+q3_sum_t <- q3_sum_t[-9,]
+q3_sum_t$order <- c(1,2,3,4,5,6,7,8)
+
+prestige_hist <- ggplot(q3_sum_t,aes(x=Prestige,y=reorder(row.names(q3_sum_t),order))) + 
+  geom_bar(stat="identity",fill="springgreen4",binwidth=0,width=1.2) +
+  labs(x="Count",y="Rank",title="Prestige (2)") +
+    theme_bw(base_size=16) + coord_flip() + 
+    xlim(0,120) + 
+    scale_y_discrete(labels = c("1","2","3","4","5","6","7","8")) +
+    theme(plot.title = element_text(hjust = 0.1))
+
+audience_hist <- ggplot(q3_sum_t,aes(x=Audience,y=reorder(row.names(q3_sum_t),order))) + 
+  geom_bar(stat="identity",fill="springgreen4",binwidth=0,width=1.2) +
+  labs(x="Count",y="Rank",title="Audience (2)") +
+    theme_bw(base_size=16) + coord_flip() + 
+    xlim(0,120) + 
+    scale_y_discrete(labels = c("1","2","3","4","5","6","7","8")) +
+   theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        plot.title = element_text(hjust = 0.1))
+
+oa_hist <- ggplot(q3_sum_t,aes(x=Open_Access,y=reorder(row.names(q3_sum_t),order))) + 
+  geom_bar(stat="identity",fill="springgreen4",binwidth=0,width=1.2) +
+  labs(x="Count",y="Rank",title="Open Access (4)") +
+    theme_bw(base_size=16) + coord_flip() + 
+  xlim(0,120) + 
+    scale_y_discrete(labels = c("1","2","3","4","5","6","7","8")) +
+   theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        plot.title = element_text(hjust = 0.1))
+
+impact_hist <- ggplot(q3_sum_t,aes(x=Impact_Factor,y=reorder(row.names(q3_sum_t),order))) + 
+  geom_bar(stat="identity",fill="springgreen4",binwidth=0,width=1.2) +
+  labs(x="Count",y="Rank",title="Impact Factor (5)") +
+    theme_bw(base_size=16) + coord_flip() + 
+  xlim(0,120) + 
+    scale_y_discrete(labels = c("1","2","3","4","5","6","7","8")) +
+   theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        plot.title = element_text(hjust = 0.1))
+
+review_hist <- ggplot(q3_sum_t,aes(x=Review_Process,y=reorder(row.names(q3_sum_t),order))) + 
+  geom_bar(stat="identity",fill="springgreen4",binwidth=0,width=1.2) +
+  labs(x="Count",y="Rank",title="Review (5)") +
+    theme_bw(base_size=16) + coord_flip() + 
+    xlim(0,120) + 
+    scale_y_discrete(labels = c("1","2","3","4","5","6","7","8"))
+
+accept_hist <- ggplot(q3_sum_t,aes(x=Accept_Rate,y=reorder(row.names(q3_sum_t),order))) + 
+  geom_bar(stat="identity",fill="springgreen4",binwidth=0,width=1.2) +
+  labs(x="Count",y="Rank",title="Acceptance (6)") +
+    theme_bw(base_size=16) + coord_flip() + 
+    xlim(0,120) + 
+    scale_y_discrete(labels = c("1","2","3","4","5","6","7","8")) +
+     theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        plot.title = element_text(hjust = 0.1))
+
+personal_hist <- ggplot(q3_sum_t,aes(x=Personal_Links,y=reorder(row.names(q3_sum_t),order))) + 
+  geom_bar(stat="identity",fill="springgreen4",binwidth=0,width=1.2) +
+  labs(x="Count",y="Rank",title="Personal (6)") +
+    theme_bw(base_size=16) + coord_flip() + 
+    xlim(0,120) + 
+    scale_y_discrete(labels = c("1","2","3","4","5","6","7","8")) +
+     theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        plot.title = element_text(hjust = 0.1))
+
+professional_hist <- ggplot(q3_sum_t,aes(x=Prof_Obligation,y=reorder(row.names(q3_sum_t),order))) + 
+  geom_bar(stat="identity",fill="springgreen4",binwidth=0,width=1.2) +
+  labs(x="Count",y="Rank",title="Professional (7)") +
+    theme_bw(base_size=16) + coord_flip() + 
+    xlim(0,120) + 
+    scale_y_discrete(labels = c("1","2","3","4","5","6","7","8")) +
+     theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        plot.title = element_text(hjust = 0.1))
+
+```
+
+```{r}
+jpeg("~/Desktop/Figure_5.jpg",width=15,height=15,units="in",res=300)
+ggarrange(prestige_hist,audience_hist,oa_hist,impact_hist,
+          review_hist,accept_hist,personal_hist,professional_hist,ncol=4,nrow=2,
+          labels = c("A","B","C","D","E","F","G","H"))
+dev.off()
+
+```
+
+
+```{r}
+q1_career <- cbind(results[8],q1_SJR) %>% mutate(mean_SJR=round(rowMeans(q1_SJR,na.rm=TRUE),2)) 
+q1_career$Position_Short <- ifelse(q1_career$Career == "Assistant Professor","Asst Prof",
+                       ifelse(q1_career$Career == "Associate Professor", "Assoc Prof",
+                              ifelse(q1_career$Career == "Full Professor", "Professor",
+                                     ifelse(q1_career$Career == "Emeritus Professor", "Emeritus",
+                                            ifelse(q1_career$Career == "Master's Student","Masters",
+                                                   ifelse(q1_career$Career=="PhD Student","PhD",
+                                                          ifelse(q1_career$Career=="Post-Doc","Post-Doc",
+                                                                 ifelse(q1_career$Career=="Visiting Professor", "Visit Prof",
+                                                                        ifelse(q1_career$Career=="CRM/Contract Archaeologist","CRM","Other")))))))))
+q1_career_axis <- data.frame(Position_Short=c("PhD", "Asst Prof", "Assoc Prof", "Post-Doc","Professor",
+                                           "Other","CRM","Masters","Visit Prof","Emeritus"),
+                          car_x_pos=c(2,5,6,3,7,10,9,1,4,8))
+q1_career_order<- left_join(q1_career, q1_career_axis, by="Position_Short")
+
+
+q2_career <- cbind(results[8],q2_SJR) %>% mutate(mean_SJR=round(rowMeans(q2_SJR,na.rm=TRUE),3))
+q2_career$Position_Short <- ifelse(q1_career$Career == "Assistant Professor","Asst Prof",
+                       ifelse(q1_career$Career == "Associate Professor", "Assoc Prof",
+                              ifelse(q1_career$Career == "Full Professor", "Professor",
+                                     ifelse(q1_career$Career == "Emeritus Professor", "Emeritus",
+                                            ifelse(q1_career$Career == "Master's Student","Masters",
+                                                   ifelse(q1_career$Career=="PhD Student","PhD",
+                                                          ifelse(q1_career$Career=="Post-Doc","Post-Doc",
+                                                                 ifelse(q1_career$Career=="Visiting Professor", "Visit Prof",
+                                                                        ifelse(q1_career$Career=="CRM/Contract Archaeologist","CRM","Other")))))))))
+q2_career_axis <- data.frame(Position_Short=c("PhD", "Asst Prof", "Assoc Prof", "Post-Doc","Professor",
+                                           "Other","CRM","Masters","Visit Prof","Emeritus"),
+                          car_x_pos=c(2,5,6,3,7,10,9,1,4,8))
+q2_career_order<- left_join(q2_career, q2_career_axis, by="Position_Short")
+
+q1_career_means <- q1_career_order %>% group_by(Career) %>% summarise(mean=mean(mean_SJR,na.rm=TRUE)) %>%
+  mutate(Position_Short=c("Asst Prof","Assoc Prof","CRM", "Emeritus", "Professor", "Masters","Other","PhD","Post-Doc","Visit Prof")) %>% left_join(career_axis, by="Position_Short") %>% arrange(car_x_pos)
+
+q2_career_means <- q2_career_order %>% group_by(Career) %>% summarise(mean=mean(mean_SJR,na.rm=TRUE)) %>%
+  mutate(Position_Short=c("Asst Prof","Assoc Prof","CRM", "Emeritus", "Professor", "Masters","Other","PhD","Post-Doc","Visit Prof")) %>% left_join(career_axis, by="Position_Short") %>% arrange(car_x_pos)
+
+
+q1_career_hist<-ggplot(q1_career_order,aes(x=reorder(Position_Short,car_x_pos),y=mean_SJR)) +
+  geom_violin(fill="gold4",alpha=0.5) +
+  geom_point() +
+  labs(x="",y="Q1 - Mean SJR",title="Career Stage") +
+  annotate("text",x=c(1,2,3,4,5,6,7,8,9,10),y=10,label = round(q1_career_means$mean,2),
+            vjust=-0.75,
+            color = "black",
+            size = 4) +
+  theme_bw(base_size=20) + 
+  ylim(0,12) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),plot.margin = unit(c(0.5,0.5,0.5,0.5),"cm"))
+
+q2_career_hist<-ggplot(q2_career_order,aes(x=reorder(Position_Short,car_x_pos),y=mean_SJR)) +
+  geom_violin(fill="gold4",alpha=0.5) +
+  geom_point() +
+  labs(x="",y="Q2 - Mean SJR",title="") +
+  annotate("text",x=c(1,2,3,4,5,6,7,8,9,10),y=19.5,label = round(q2_career_means$mean,2),
+            vjust=-0.75,
+            color = "black",
+            size = 4) +
+  theme_bw(base_size=20) + 
+  ylim(0,21) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),plot.margin = unit(c(0.5,0.5,0.5,0.5),"cm"))
+
+```
+
+
+```{r}
+jpeg("~/Desktop/Figure_6.jpg",width = 10, height = 10, units="in", res = 300)
+ggarrange(q1_career_hist,q2_career_hist,nrow=2,ncol=1,labels=c("A","B"))
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
