@@ -1,6 +1,6 @@
 # Introduction
 
-This markdown document presents the R code for the analysis of responses from the Publication Decisions in Archaeology (PDIA) survey of carried out by Drs. Jess Beck, Erik Gjesfjeld, and Stephen Chrisomalis. The data presented here was derived from a survey that was taken by respondents through the Qualtrics platform with details provided in the manuscript and supplemental information.
+This repository presents the R code and resulting figures from the Publication Decisions in Archaeology (PDIA) survey of carried out by Drs. Jess Beck, Erik Gjesfjeld, and Stephen Chrisomalis. The data presented here was derived from a survey that was taken by respondents through the Qualtrics platform with details provided in the manuscript and supplemental information.
 
 # Data Sources
 
