@@ -270,7 +270,7 @@ Next, we will also want to merge (or join) each of the journal names given as a 
 Q1_SJR<-left_join(Q1_table,journal_scores,by="journal_name")
 #Arranging in descending order and adding a 
 #rank category (although not used in our analysis)
-Q1_SJR <- Q1_SJR %>% arrange(desc(SJR)) %>% mutate(SJR_rank=rank(-SJR))
+Q1_SJR <- Q1_SJR %>% arrange(desc(SJR)) %>% mutate(SJR_rank=rank(-SJR)) %>% filter(journal_name !="")
 ```
 
 Figure 3A presents the relationship between SJR scores and the prestige of journals (based on the counts from question 1) and can be visualized with the following:
@@ -334,7 +334,7 @@ Q2_SJR<-left_join(Q2_table,journal_scores,by="journal_name")
 
 #Arranging in descending order and adding 
 #a rank category (although not used in our analysis)
-Q2_SJR <- Q2_SJR %>% arrange(desc(SJR)) %>% mutate(SJR_rank=rank(-SJR))
+Q2_SJR <- Q2_SJR %>% arrange(desc(SJR)) %>% mutate(SJR_rank=rank(-SJR)) %>% filter(journal_name !="")
 
 #Subsetting the journals to be plotted in the main plot and the inset 
 #plot (these are lower values as question 2 only asked for three journals)

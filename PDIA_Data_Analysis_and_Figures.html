@@ -11,7 +11,7 @@
 
 <meta name="author" content="Erik Gjesfjeld, Jess Beck, Stephen Chrisomalis" />
 
-<meta name="date" content="2021-05-19" />
+<meta name="date" content="2021-05-20" />
 
 <title>Supplemental Information for Prestige or Perish: Publishing Decisions in Academic Archaeology</title>
 
@@ -1560,7 +1560,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Supplemental Information for <em>Prestige or Perish: Publishing Decisions in Academic Archaeology</em></h1>
 <h4 class="author">Erik Gjesfjeld, Jess Beck, Stephen Chrisomalis</h4>
-<h4 class="date">2021-05-19</h4>
+<h4 class="date">2021-05-20</h4>
 
 </div>
 
@@ -1747,7 +1747,7 @@ Q1_table$rank &lt;- as.numeric(as.factor(-Q1_table$count))</code></pre>
 Q1_SJR&lt;-left_join(Q1_table,journal_scores,by=&quot;journal_name&quot;)
 #Arranging in descending order and adding a 
 #rank category (although not used in our analysis)
-Q1_SJR &lt;- Q1_SJR %&gt;% arrange(desc(SJR)) %&gt;% mutate(SJR_rank=rank(-SJR))</code></pre>
+Q1_SJR &lt;- Q1_SJR %&gt;% arrange(desc(SJR)) %&gt;% mutate(SJR_rank=rank(-SJR)) %&gt;% filter(journal_name !=&quot;&quot;)</code></pre>
 <p>Figure 3A presents the relationship between SJR scores and the prestige of journals (based on the counts from question 1) and can be visualized with the following:</p>
 <pre class="r"><code>#Subsetting the journals that have both lower counts and lower SJR scores
 Q1_outs&lt;-filter(Q1_SJR, count &gt;= 50 | SJR &gt;= 7) %&gt;% drop_na()
@@ -1803,7 +1803,7 @@ Q2_SJR&lt;-left_join(Q2_table,journal_scores,by=&quot;journal_name&quot;)
 
 #Arranging in descending order and adding 
 #a rank category (although not used in our analysis)
-Q2_SJR &lt;- Q2_SJR %&gt;% arrange(desc(SJR)) %&gt;% mutate(SJR_rank=rank(-SJR))
+Q2_SJR &lt;- Q2_SJR %&gt;% arrange(desc(SJR)) %&gt;% mutate(SJR_rank=rank(-SJR)) %&gt;% filter(journal_name !=&quot;&quot;)
 
 #Subsetting the journals to be plotted in the main plot and the inset 
 #plot (these are lower values as question 2 only asked for three journals)
