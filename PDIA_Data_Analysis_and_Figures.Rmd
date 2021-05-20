@@ -1,7 +1,7 @@
 
 
 ---
-title: "Supplemental Information for *Publshing Decision in Archaeology*"
+title: "Supplemental Information for *Prestige or Perish: Publishing Decisions in Academic Archaeology*"
 author: "Erik Gjesfjeld, Jess Beck, Stephen Chrisomalis"
 date: "`r Sys.Date()`"
 output:
@@ -55,7 +55,7 @@ library(ggpubr)
 
 The two repositories for the data and code can be found at the following links:
 
-[Figshare](https://figshare.com/s/24cf4ca08c5f62ea52af) and Erik Gjesfjeld's [GitHub page](https://github.com/erikgjes/Publishing_Decisions_in_Archaeology).
+[Figshare](https://www.doi.org/10.6084/m9.figshare.c.5256425) or at Erik Gjesfjeld's [GitHub page](https://github.com/erikgjes/Prestige-or-Perish-Publishing-Decisions-in-Academic-Archaeology)
 
 The previously cleaned survey data can be loaded directly into your R environment with
 
@@ -64,7 +64,7 @@ The previously cleaned survey data can be loaded directly into your R environmen
 results <- read.csv('https://git.io/JLA1W')
 ```
 
-The data collected from Scimago and Ulrich's can be read in with the following command:
+The data collected from SCImago and Ulrich's can be read in with the following command:
 
 ```{r loading journals, eval=TRUE }
 #Reading in the journal metadata and SJR scores for journals
@@ -415,7 +415,7 @@ ggarrange(plot_2A, plot_2B, ncol=1,nrow=2,
 
 ## Question 3 
 
-**How do gender and career stage relate to journals listed to respondents?**
+**How do gender and career stage relate to the perceived prestige of journals?**
 
 In order to examine this question, we aimed to test for significant differences between gender (men and women) and career stage. We further classified career stages into either tenure-track (TT) or non-tenure-track (non-TT). The former includes all respondents who identified as Assistant Professors, Associate Professors, Full Professors, and Emeritus Professors. The latter category (non-TT) includes Masters students, PhD students, Post-Docs, Visiting Professors, CRM/Contract Archaeologists, and any respondents that choose "Other". The division allowed us to perform a Student's t-test for significant differences between the mean SJR scores for our pairs of groups (Men/Women and Tenure-Track/Non-Tenure-Track).
 
@@ -471,12 +471,11 @@ q2_Women <- filter(q2_gender, Gender == "Woman")  %>% as.data.frame()
 q2_TT <- filter(q2_TT_Career, Career_TT == "TT")  %>% as.data.frame()
 q2_non_TT <- filter(q2_TT_Career, Career_TT == "Non-TT")  %>% as.data.frame()
 
-#Performing t-tests for gender and career stage for questions 1 and 2
-t.test(q1_Men$mean_SJR,q1_Women$mean_SJR)
-t.test(q1_TT$mean_SJR,q1_non_TT$mean_SJR)
-t.test(q2_Men$mean_SJR,q2_Women$mean_SJR)
-t.test(q2_TT$mean_SJR,q2_non_TT$mean_SJR)
-
+#Performing Mann-Whitney-Wilcoxon Test for gender and career stage for questions 1 and 2
+wilcox.test(q1_Men$mean_SJR,q1_Women$mean_SJR)
+wilcox.test(q1_TT$mean_SJR,q1_non_TT$mean_SJR)
+wilcox.test(q2_Men$mean_SJR,q2_Women$mean_SJR)
+wilcox.test(q2_TT$mean_SJR,q2_non_TT$mean_SJR)
 ```
 
 In order to visualize the differences between our groups, we use a series of violin plots. See ?geom_violin for additional information about a violin plot. Broadly, it can be viewed as a display of a continuous distribution and is a blend of a boxplot and a mirrored density plot. 
@@ -554,14 +553,14 @@ The violin plots can be arranged and plotted using the following code:
 jpeg("Figure_4.jpg",width=12,height=10,units="in",res=300)
 ggarrange(q1_gender_violin, q1_TT_violin, q2_gender_violin, q2_TT_violin,
           ncol=2,nrow=2,
-          labels = c("A","B***","C*","D*"))
+          labels = c("A","B*","C**","D**"))
 dev.off()
 ```
 
 ```{r fig 4 rmd, eval=TRUE, warning=FALSE, message = FALSE,  echo=FALSE, fig.width=10, fig.height=8, fig.align='center'}
 ggarrange(q1_gender_violin, q1_TT_violin, q2_gender_violin, q2_TT_violin,
           ncol=2,nrow=2,
-          labels = c("A","B***","C*","D*"))
+          labels = c("A","B*","C**","D**"))
 ```
 
 
