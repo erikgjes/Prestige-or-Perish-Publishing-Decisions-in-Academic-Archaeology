@@ -21,11 +21,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-This markdown document presents the R code for the analysis of responses from the Publication Decisions in Archaeology (PDIA) survey of carried out by Drs. Jess Beck, Erik Gjesfjeld, and Stephen Chrisomalis. The data presented here was derived from a survey that was taken by respondents through the Qualtrics platform with details provided in the manuscript and supplemental information.
+This markdown document presents the R code for the analysis of responses from the Prestige or Perish: Publishing Decisions in Academic Archaeology survey of carried out by Drs. Jess Beck, Erik Gjesfjeld, and Stephen Chrisomalis. The data presented here was derived from a survey that was taken by respondents through the Qualtrics platform with details provided in the manuscript and supplemental information.
 
 # Data Sources
 
-The analysis preformed in this research is broadly comprised of six sources of data. These include:
+The analysis preformed in this research is comprised of six sources of data. These include:
 
 1. Demographic information for each respondent (PDIA_Cleaned.csv)
 2. List of Journal names given by each respondent (PDIA_Cleaned.csv)
@@ -35,10 +35,10 @@ The analysis preformed in this research is broadly comprised of six sources of d
 6. Additional Journal metadata as provided Ulrich's database (Journals_SJR_Ulrichs.csv)
 
 
-# Data cleaning
+# Data Cleaning
 
-Data used in this work was initially cleaned by Dr. J. Beck and provided with further cleaning was performed by Dr. E. Gjesfjeld. The cleaning process broadly included the following:  
- - Removal of timestamp information for respondents  
+Data used in this work was initially cleaned by Dr. J. Beck with further cleaningby Dr. E. Gjesfjeld. The cleaning process broadly included the following:  
+ -  Removal of timestamp information for respondents  
  -  Standardization of journal names (i.e. removing journal abbreviations) to coincide with Ulrich's journal names  
  -  Summarizing comments  
 
@@ -49,8 +49,11 @@ The organization and analysis of the data is performed using R and these related
 ```{r,message=FALSE,results=FALSE}
 #install.packages("tidyverse)
 #install.packages("ggpubr")
+#install.packages("ggrepel")
 library(tidyverse)
 library(ggpubr)
+library(ggrepel)
+library(knitr)
 ```
 
 The two repositories for the data and code can be found at the following links:
@@ -74,7 +77,7 @@ journal_scores <- read.csv('https://git.io/JLA14')
 
 ## Demographic Information
 
-We summarized demographic information on respondents using the following code. Here we present the results for gender, age, and career stage.  
+We summarized demographic information about respondents using the following code. Here we present the results for gender, age, and career stage.  
 
 ```{r parse demo data, eval=TRUE, message=FALSE }
 #Gender results
@@ -174,7 +177,7 @@ dev.off()
 ```
 
 ```{r Figure 1 rmd, eval=TRUE, echo=FALSE, fig.height= 10, fig.width=10, fig.align='center'}
-#This is included here to display the image in the markdown html
+#This is included here to display the Figure 1 in the markdown html
 ggarrange(ggarrange(gender_hist, age_hist, ncol = 2, labels = c("A", "B")),
           career_hist,
           nrow = 2, 
@@ -186,7 +189,7 @@ ggarrange(ggarrange(gender_hist, age_hist, ncol = 2, labels = c("A", "B")),
 
 # Results
 
-This research project aimed to examine four key research questions. The data analysis and plotting used to evaluate each question can be found below. Please see the manuscript for additional details.  
+This research project aimed to examine four research questions. The data analysis and plotting used to evaluate each question can be found below. Please see the manuscript in American Antiquity for additional details.  
 
 ## Question 1
 
@@ -236,7 +239,7 @@ dev.off()
 
 
 ```{r Figure 2 rmd, eval=TRUE, echo=FALSE, fig.width=10, fig.height=8}
-#This is included here to display the image in the markdown html
+#This is included here to display Figure 2 in the markdown html
 subject_table_top %>%
   arrange(Count) %>%   
   mutate(name=factor(Subject, levels=Subject)) %>%  
@@ -279,43 +282,45 @@ Figure 3A presents the relationship between SJR scores and the prestige of journ
 #Subsetting the journals that have both lower counts and lower SJR scores
 Q1_outs<-filter(Q1_SJR, count >= 50 | SJR >= 7) %>% drop_na()
 Q1_inset<-filter(Q1_SJR, count <= 50 | SJR <= 7) 
-
 #Plotting the main plot and adding labels to commonly listed journals
 Q1_plot <- ggplot(Q1_SJR,aes()) +
   geom_point(aes(x=count,y=SJR),color="navyblue",size=3) +
   lims(x=c(-1,200),y=c(-1,30)) +
-    labs(x="Count",y="SJR",title="") +
+  labs(x="Count",y="SJR",title="") +
   annotate("rect",xmin=-1,xmax=50,ymin=-1,ymax=7,fill="grey50",
            alpha=0.2,color="grey50") +
-  geom_text(data=Q1_outs,aes(x=count,y=SJR,label=c("Cell","Nature","Science",
-                                                   "PNAS","JAS","CA","JAA",
-                                                   "JAMT","Amer Antiquity",
-                                                   "Antiquity")),
-            hjust=c(-.3,-.3,-.3,-.3,-.3,-.3,-.3,.5,-.1,-.1),
-            vjust=c(0,0,0,0,0,0,0,1.5,0,0)) +
+  geom_text_repel(data=Q1_outs,aes(x=count,y=SJR,
+                             label=c("Cell", "Nature", "Science", 
+                                     "Proc. Natl. Acad. Sci. U.S.A.", 
+                                     "J. Archaeol. Sci.", "Curr. Anthropol.", 
+                                     "J. Anthropol. Archaeol.", 
+                                     "J. Archaeol. Method Theory", 
+                                     "Am. Antiq.", "Antiquity")),
+                  hjust=c(0.3,0.3,0.3,0.1,0.3,0.3,0.2,0.-0.3,0.3,0.3),
+                  vjust=c(-1,-1,-1,-1,-1,-2,-.5,3,2,-1),
+                  min.segment.length = 1) +
   theme_bw(base_size=20)
-
 #Subsetting the journals to be plotted in the inset plot
 Q1_inset_counts <- filter(Q1_inset, count <= 50 & count >= 38 & SJR <7) 
 Q1_inset_SJR <- filter(Q1_inset, SJR >= 2.2 & SJR <= 7 & count <=50) 
 Q1_inset_outs <- rbind(Q1_inset_counts,Q1_inset_SJR) 
-
 #Plotting the inset plot along with labels for journals
 Q1_inset_plot<-ggplot(Q1_inset,aes()) +
   geom_point(aes(x=count,y=SJR),color="navyblue",size=3) +
   lims(x=c(0,50),y=c(0,7)) +
-      labs(x="Count",y="SJR",title="") +
-  geom_text(data=Q1_inset_outs,aes(x=count,y=SJR,label=c("JAR","WA","SciAdv",
-                                                         "NatComms",
-                                                         "NatEcoEvol",
-                                                          "NatHumBeah","QSR",
-                                                         "ProcB")),
-            hjust=c(-.3,-.3,-.3,-.15,-.1,-.1,-.2,-.2),
-            vjust=c(0,0,0,0.5,0.5,0.5,0,0)) +
-  theme_bw(base_size=20) +
-  theme( plot.background = element_rect(fill = "transparent",colour = NA),
-         panel.background = element_rect(fill = alpha('grey50',0.2),
-                                         colour = NULL))
+  labs(x="Count",y="SJR",title="") +
+  geom_text_repel(data=Q1_inset_outs,aes(x=count,y=SJR,label=c("J. Archaeol. Res.", 
+                                                               "World Archaeol.", "Sci. Adv.", 
+                                                               "Nat. Commun.", "Nat. Eco. Evol.", 
+                                                               "Nat. Hum. Behav.", "Quat. Sci. Rev.", 
+                                                               "Proc. R. Soc. B")),
+            hjust=c(.3,.3,.3,.7,.1,.1,.3,.3),
+            vjust=c(-1,-1,-1,-1,-1,-1,-1,-1),
+            min.segment.length = 1) +
+            theme_bw(base_size=20) +
+              theme( plot.background = element_rect(fill = "transparent",colour = NA),
+                     panel.background = element_rect(fill = alpha('grey50',0.2),colour = NULL))
+
 ```
 
 Figure 3B presents the relationship between SJR scores and the prestige of journals (based on the counts from question 1) and can be visualized with the following:
@@ -328,45 +333,43 @@ Q2_table<-as.data.frame(table(Q2)) %>% arrange(desc(Freq))
 names(Q2_table) <- c("journal_name","count")
 Q2_table$prop<-round(Q2_table$count/sum(Q2_table$count),digits=2)
 Q2_table$rank <- as.numeric(as.factor(-Q2_table$count))
-
 #Joining survey data and SJR scores based on journal name
 Q2_SJR<-left_join(Q2_table,journal_scores,by="journal_name")
-
 #Arranging in descending order and adding 
 #a rank category (although not used in our analysis)
 Q2_SJR <- Q2_SJR %>% arrange(desc(SJR)) %>% mutate(SJR_rank=rank(-SJR)) %>% filter(journal_name !="")
-
 #Subsetting the journals to be plotted in the main plot and the inset 
 #plot (these are lower values as question 2 only asked for three journals)
 Q2_outs<-filter(Q2_SJR, count >= 25 | SJR >= 7) %>% drop_na()
 Q2_inset<-filter(Q2_SJR, count <= 25 | SJR <= 7)
-
 Q2_inset_counts <- filter(Q2_inset, count <= 25 & count >= 12 & SJR <7)
 Q2_inset_SJR <- filter(Q2_inset, SJR >= 3 & SJR <= 7 & count <=25)
 Q2_inset_outs <- rbind(Q2_inset_counts,Q2_inset_SJR)                
-
 #Plotting the main  plot along with labels for journals
 Q2_plot <- ggplot(Q2_SJR,aes()) +
   geom_point(aes(x=count,y=SJR),color="darkgreen",size=3) +
   lims(x=c(-1,100),y=c(-1,30)) +
   annotate("rect",xmin=-1,xmax=25,ymin=-1,ymax=7,fill="grey50",
            alpha=0.2,color="grey50") +
-  geom_text(data=Q2_outs,aes(x=count,y=SJR,label=c("Cell","Nature","Science",
-                                                   "PNAS","JAS","CA",
-                                                   "Amer Antiquity",
-                                                   "Antiquity")),
-            hjust=c(-.3,-.2,-.2,-.3,-.3,-.3,.5,-.2),
-            vjust=c(0,0,0,0,0,0,1.5,0.3)) +
+  geom_text_repel(data=Q2_outs,aes(x=count,y=SJR,label=c("Cell","Nature","Science",
+                                                   "Proc. Natl. Acad. Sci. U.S.A.",
+                                                   "J. Archaeol. Sci.","Curr. Anthropol.",
+                                                   "Am. Antiq.", "Antiquity")),
+            hjust=c(0.3,0.3,0.3,0.2,0.3,0.3,0.3,0.3),
+            vjust=c(-1,-1,-1,-1,-1,-1,-1,-1),
+            min.segment.length = 1) +
   theme_bw(base_size = 20) + labs(x="Count",y="SJR")
-
 #Plotting the inset plot along with labels for journals
 Q2_inset_plot<-ggplot(Q2_inset,aes()) +
   geom_point(aes(x=count,y=SJR),color="darkgreen",size=3) +
-  geom_text(data=Q2_inset_outs,aes(x=count,y=SJR,label=c("JAA","JAMT","PlosOne",
-                                                         "AmerAnth","WA","AJA",
-                                                         "SciAdv","NatComms")),          
-            hjust=c(0.8,0.5,0.8,.5,-.3,1.1,-.3,-.1),
-            vjust=c(-.5,-0.6,1.2,-1,1.3,1,0,1)) +
+  geom_text_repel(data=Q2_inset_outs,aes(x=count,y=SJR,label=c("J. Anthropol. Archaeol.",
+                                                               "J. Archaeol. Method Theory",
+                                                               "PLOS ONE", "Am. Anthopol.",
+                                                               "World Archaeol.","Am. J. Archaeol.",
+                                                               "Sci. Adv.","Nat. Commun.")),          
+            hjust=c(0.65,0.3,0.3,.3,0.3,0.3,0.3,0.3),
+            vjust=c(-1,-4,3,-1,0,0,0,0),
+            min.segment.length = 1) +
   lims(x=c(0,25),y=c(0,7)) +
   theme_bw(base_size = 20) +
   theme(panel.background = element_rect(fill = alpha('grey50',0.2),
@@ -374,7 +377,7 @@ Q2_inset_plot<-ggplot(Q2_inset,aes()) +
   labs(x="Count",y="SJR")
 ```
 
-Once these plots have been created the can be arranged and plotted with the following code:
+Once these plots have been created the can be arranged and plotted with the following code.  It should be noted that the 'ggrepel' package adjusts labels automatically based on screen size. Therefore, it is likely that label placement will be different when rendered on different computers / screens. The original image from the publication is provided for reference which can be found in the GitHub (https://github.com/erikgjes/Prestige-or-Perish-Publishing-Decisions-in-Academic-Archaeology/blob/main/Figure_3.jpg) or FigShare repository.  
 
 ```{r Figure 3, eval=FALSE,warning=FALSE,message=FALSE}
 jpeg("Figure_3.jpg",width=12,height=12,units="in",res=300)
@@ -397,27 +400,31 @@ dev.off()
 ```
 
 
-```{r fig 3 rmd, eval=TRUE, echo=FALSE, warning=FALSE, message = FALSE, fig.width=10, fig.height=12, fig.align='center'}
-
+```{r fig 3 rmd, eval=FALSE, echo=FALSE, warning=FALSE, message = FALSE, fig.width=10, fig.height=12, fig.align='center'}
+#This is here to display Figure 3 in the R markdown html
 par(mfrow=c(2,1))
 
-plot_2A <- Q1_plot + annotation_custom(ggplotGrob(Q1_inset_plot),
+plot_3A <- Q1_plot + annotation_custom(ggplotGrob(Q1_inset_plot),
                              xmin = 75, xmax = 200, ymin = 10, ymax = 33)
 
-plot_2B <- Q2_plot + annotation_custom(ggplotGrob(Q2_inset_plot),
+plot_3B <- Q2_plot + annotation_custom(ggplotGrob(Q2_inset_plot),
                              xmin = 13, xmax = 80, ymin = 10, ymax = 30)
 
-ggarrange(plot_2A, plot_2B, ncol=1,nrow=2,
+ggarrange(plot_3A, plot_3B, ncol=1,nrow=2,
           labels = c("A","B"))
 
 ```
 
 
+```{r,eval=TRUE,echo=FALSE, fig.width=10,fig.height=12,fig.align='center'}
+include_graphics("Figure_3.jpg")
+```
+
 ## Question 3 
 
 **How do gender and career stage relate to the perceived prestige of journals?**
 
-In order to examine this question, we aimed to test for significant differences between gender (men and women) and career stage. We further classified career stages into either tenure-track (TT) or non-tenure-track (non-TT). The former includes all respondents who identified as Assistant Professors, Associate Professors, Full Professors, and Emeritus Professors. The latter category (non-TT) includes Masters students, PhD students, Post-Docs, Visiting Professors, CRM/Contract Archaeologists, and any respondents that choose "Other". The division allowed us to perform a Student's t-test for significant differences between the mean SJR scores for our pairs of groups (Men/Women and Tenure-Track/Non-Tenure-Track).
+In order to examine this question, we aimed to test for significant differences between gender (men and women) and career stage. We further classified career stages into either tenure-track (TT) or non-tenure-track (non-TT). The former includes all respondents who identified as Assistant Professors, Associate Professors, Full Professors, and Emeritus Professors. The latter category (non-TT) includes Masters students, PhD students, Post-Docs, Visiting Professors, CRM/Contract Archaeologists, and any respondents that choose "Other". The division allowed us to perform a non-parametric Mann-Whitney-Wilcoxon test for significant differences between the mean SJR scores of our pairs of groups (Men/Women and Tenure-Track/Non-Tenure-Track). (Note: Normality was evaluated through histograms of mean SJR scores as well as a Shapiro-Wilk test)
 
 ```{r t-tests, eval=TRUE, warning = FALSE}
 #Subsetting response for questions 1 and 2 (again)
@@ -568,7 +575,7 @@ ggarrange(q1_gender_violin, q1_TT_violin, q2_gender_violin, q2_TT_violin,
 
 **What factors do archaeologists say they are considering when they decide where to publish an academic article?**
 
-This question is directly address in Question 3 of our survey which asked participants to rank eight different factors that they might consider when publishing an academic article. The analysis of responses from the question is provided below.
+This question is directly addressed in Question 3 of our survey which asked participants to rank eight different factors that they might consider when publishing an academic article. The analysis of responses from the question is provided below.
 
 ```{r q4 data,echo=FALSE,message=FALSE}
 #Subset responses for question 3
@@ -612,7 +619,7 @@ colnames(rank_summary) <- "median"
 rank_summary$mean <- colMeans(rank_list)
 ```
 
-Once we have parsed the data from the survey into usable dataframe, we want to visualize the distribution of rank orders for each factor that was listed (prestige, audience, open access, impact factor, review duration, acceptance rate, professional obligation, personal relationships). These individual histograms can be created using the following:
+Once we have parsed the data from the survey into a usable dataframe, we want to visualize the distribution of rank orders for each factor that was listed (prestige, audience, open access, impact factor, review duration, acceptance rate, professional obligation, personal relationships). These individual histograms can be created using the following:
 
 
 ```{r q3_hists,eval=TRUE,echo=TRUE,warning=FALSE,message=FALSE}
@@ -734,7 +741,7 @@ ggarrange(prestige_hist,audience_hist,oa_hist,impact_hist,
 
 # SJR Scores by Career Stage
 
-Finally, we were also interested in examining the mean SJR scores for each of our specific career stage category, as opposed to the aggregated categories highlighted above. Here, we use violin plots again to visualize the distribution of mean SJR scores for each survey respondent based on the self-identified career stage. 
+Finally, we were also interested in examining the mean SJR scores for each of our specific career stage category, as opposed to the aggregated categories highlighted above. Here, we use violin plots again to visualize the distribution of mean SJR scores for each survey respondent based on their self-identified career stage. 
 
 
 ```{r career_SJR, eval=TRUE,warning=FALSE,message=FALSE}
@@ -754,7 +761,7 @@ q1_career$Position_Short <-
     ifelse(q1_career$Career=="Visiting Professor", "Visit Prof",
     ifelse(q1_career$Career=="CRM/Contract Archaeologist","CRM","Other")))))))))
 
-#Adding in shorten names and joining with previous and also 
+#Adding in shorter names and joining with previous, also 
 #reordering x-axis based chronological order of career stage
 q1_career_axis <- data.frame(Position_Short=c("PhD", "Asst Prof", "Assoc Prof",
                                               "Post-Doc","Professor","Other",
