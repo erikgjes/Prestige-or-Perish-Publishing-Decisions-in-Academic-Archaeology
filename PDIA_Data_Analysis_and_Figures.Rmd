@@ -199,7 +199,7 @@ In order to answer this question, we relied on Ulrich's Serial Directory (Ulrich
 
 ```{r ulrichs subject, eval=TRUE}
 #Read in subject areas for listed journals
-subject_ulrichs<-read.csv("https://git.io/JLA1u")
+subject_ulrichs<-read.csv("https://git.io/JE34h")
 
 #Counting up the subject areas across all four subject areas
 subject_table <- as.data.frame(table(c(subject_ulrichs$subject_1,
